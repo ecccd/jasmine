@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jasmine/basic/commons.dart';
 import 'package:jasmine/basic/methods.dart';
 import 'package:jasmine/configs/pager_controller_mode.dart';
 import 'package:jasmine/screens/components/content_builder.dart';
 
+import '../../configs/is_pro.dart';
 import 'comic_list.dart';
 
 class ComicPager extends StatefulWidget {
@@ -92,6 +94,62 @@ class _StreamPagerState extends State<_StreamPager> {
 
   final List<ComicSimple> _data = [];
   late ScrollController _controller;
+  final TextEditingController _textEditController = TextEditingController();
+
+  _jumpPage() {
+    if (_total == 0) {
+      return;
+    }
+    if (!isPro) {
+      defaultToast(context, "发电才能跳页哦~");
+      return;
+    }
+    _textEditController.clear();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: Card(
+            child: TextField(
+              controller: _textEditController,
+              decoration: const InputDecoration(
+                labelText: "请输入页数：",
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'\d+')),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            MaterialButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('取消'),
+            ),
+            MaterialButton(
+              onPressed: () {
+                Navigator.pop(context);
+                var text = _textEditController.text;
+                if (text.isEmpty || text.length > 7) {
+                  return;
+                }
+                var num = int.parse(text);
+                if (num == 0 || num > _maxPage) {
+                  return;
+                }
+                _data.clear();
+                _nextPage = num;
+                _join();
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -102,6 +160,7 @@ class _StreamPagerState extends State<_StreamPager> {
 
   @override
   void dispose() {
+    _textEditController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -184,15 +243,19 @@ class _StreamPagerState extends State<_StreamPager> {
             ),
           ),
         ),
-        child: SizedBox(
-          height: 30,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text("已加载 ${_nextPage - 1} / $_maxPage 页"),
-              Text("已加载 ${_data.length} / $_total 项"),
-            ],
+        child: GestureDetector(
+          onTap: _jumpPage,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            height: 30,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text("已加载 ${_nextPage - 1} / $_maxPage 页"),
+                Text("已加载 ${_data.length} / $_total 项"),
+              ],
+            ),
           ),
         ),
       ),
@@ -284,6 +347,10 @@ class _PagerPagerState extends State<_PagerPager> {
             children: [
               InkWell(
                 onTap: () {
+                  if (!isPro) {
+                    defaultToast(context, "发电才能跳页哦~");
+                    return;
+                  }
                   _textEditController.clear();
                   showDialog(
                     context: context,
